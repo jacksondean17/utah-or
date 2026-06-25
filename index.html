@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Utah or Morocco?</title>
+<meta name="description" content="A 20-question photo quiz: can you tell southern Utah's red-rock country from Morocco's? No dunes, arches, or obvious landmark giveaways.">
+<meta name="color-scheme" content="dark">
+<!-- Open Graph / social preview -->
+<meta property="og:title" content="Utah or Morocco?">
+<meta property="og:description" content="20 red-rock geology photos. Can you tell southern Utah from Morocco?">
+<meta property="og:type" content="website">
+<style>
+  :root {
+    color-scheme: dark;
+    --bg:#0e0d0b;
+    --panel:#181613;
+    --panel-2:#211e1a;
+    --ink:#f5f1e8;
+    --muted:#aaa49b;
+    --line:#393632;
+    --line-soft:#2a2723;
+    --utah:#c2683a;     /* warm rust */
+    --morocco:#4a8c8c;  /* teal */
+    --good:#5fae6e;
+    --bad:#cf6b5c;
+    --focus:#e0c08a;
+  }
+  * { box-sizing:border-box; }
+  html { -webkit-text-size-adjust:100%; }
+  body {
+    margin:0; background:
+      radial-gradient(1200px 600px at 80% -10%, #1c1813 0%, transparent 60%),
+      radial-gradient(900px 500px at -10% 10%, #15110d 0%, transparent 55%),
+      var(--bg);
+    color:var(--ink);
+    font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  main { width:min(820px, 94vw); margin:26px auto 64px; }
+
+  header { display:flex; justify-content:space-between; gap:20px; align-items:flex-end; margin-bottom:14px; }
+  .titlewrap { min-width:0; }
+  h1 {
+    margin:0; font-size:clamp(30px,6vw,56px); letter-spacing:-.04em; line-height:1;
+    background:linear-gradient(95deg, var(--utah) 0%, #e6d3b4 45%, var(--morocco) 100%);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .sub { color:var(--muted); margin:8px 0 0; font-size:14px; max-width:46ch; line-height:1.4; }
+  .score {
+    color:var(--ink); white-space:nowrap; font-variant-numeric:tabular-nums;
+    background:var(--panel); border:1px solid var(--line); border-radius:999px;
+    padding:8px 14px; font-weight:650; font-size:14px;
+  }
+  .score b { color:var(--focus); }
+
+  /* progress bar */
+  .progress { height:6px; background:var(--line-soft); border-radius:999px; overflow:hidden; margin:0 0 14px; }
+  .progress > i { display:block; height:100%; width:0;
+    background:linear-gradient(90deg, var(--utah), var(--focus));
+    transition:width .35s cubic-bezier(.2,.7,.2,1); }
+
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:18px; overflow:hidden; box-shadow:0 24px 80px #0009; }
+  .frame { position:relative; background:#050505; width:100%; aspect-ratio:4/3; display:grid; place-items:center; }
+  img#photo { width:100%; height:100%; object-fit:contain; display:block; opacity:0; transition:opacity .35s ease; }
+  img#photo.loaded { opacity:1; }
+  .spinner { position:absolute; inset:0; display:grid; place-items:center; pointer-events:none; }
+  .spinner::after {
+    content:""; width:34px; height:34px; border-radius:50%;
+    border:3px solid #ffffff22; border-top-color:#ffffffaa; animation:spin .8s linear infinite;
+  }
+  .frame.loaded .spinner { display:none; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) {
+    .spinner::after { animation:none; }
+    img#photo, .progress > i { transition:none; }
+  }
+
+  .controls { padding:18px; }
+  .meta { display:flex; justify-content:space-between; color:var(--muted); margin-bottom:13px; font-size:13px; font-variant-numeric:tabular-nums; }
+
+  .buttons { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  button {
+    border:1px solid #4b4742; background:var(--panel-2); color:var(--ink);
+    font:inherit; font-weight:750; letter-spacing:.02em; border-radius:12px; padding:16px;
+    cursor:pointer; transition:transform .06s ease, background .15s ease, border-color .15s ease;
+  }
+  button:hover:not(:disabled) { background:#2c2925; }
+  button:active:not(:disabled) { transform:translateY(1px); }
+  button:focus-visible { outline:2px solid var(--focus); outline-offset:2px; }
+  button:disabled { cursor:default; }
+  .choice .kbd { color:var(--muted); font-weight:600; font-size:12px; margin-left:6px; }
+  /* answer states applied to the choice buttons */
+  .choice.is-correct { background:#1e2b20; border-color:var(--good); color:#d9f0dc; }
+  .choice.is-wrong   { background:#2c1f1c; border-color:var(--bad);  color:#f1d9d4; }
+  .choice.is-correct .kbd, .choice.is-wrong .kbd { color:inherit; opacity:.7; }
+
+  .result {
+    min-height:0; height:0; overflow:hidden; margin-top:0; padding:0 15px;
+    border:1px solid transparent; border-radius:12px; line-height:1.4;
+    transition:height .2s ease, margin .2s ease, padding .2s ease;
+  }
+  .result.show { height:auto; margin-top:14px; padding:13px 15px; }
+  .result .verdict { font-size:17px; font-weight:700; }
+  .result.correct { border-color:#3f6a4a; background:#16201a; }
+  .result.wrong   { border-color:#7a4d45; background:#201715; }
+  .result .place { color:var(--muted); margin-top:2px; font-size:14px; }
+  a { color:var(--focus); }
+
+  .nextrow { display:flex; gap:10px; margin-top:12px; }
+  .nextrow button { flex:1; }
+  #next { background:linear-gradient(180deg, #34302b, #2a2723); border-color:#5a554e; }
+  #next:hover:not(:disabled) { background:#3b362f; }
+
+  /* end screen */
+  .summary { display:none; padding:26px 20px 24px; text-align:center; }
+  .summary.show { display:block; }
+  .summary .big { font-size:clamp(40px,9vw,72px); font-weight:800; letter-spacing:-.03em;
+    background:linear-gradient(95deg, var(--utah), var(--focus), var(--morocco));
+    -webkit-background-clip:text; background-clip:text; color:transparent; line-height:1; }
+  .summary .grade { font-size:20px; font-weight:700; margin-top:10px; }
+  .summary .blurb { color:var(--muted); margin:8px auto 20px; max-width:38ch; line-height:1.45; }
+
+  footer { color:var(--muted); font-size:12.5px; line-height:1.55; margin-top:18px; }
+  footer .hint { color:#c9c2b6; }
+
+  @media (max-width:600px) {
+    header { align-items:flex-start; flex-direction:column; gap:10px; }
+    .buttons { grid-template-columns:1fr 1fr; }
+    .frame { aspect-ratio:1/1; }
+    button { padding:14px; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="titlewrap">
+      <h1>Utah or Morocco?</h1>
+      <p class="sub">20 red-rock geology photos. No dunes, famous arches, beaches, or obvious landmark giveaways &mdash; just rock.</p>
+    </div>
+    <div class="score" id="score">Score <b id="scoreNum">0</b> / <span id="scoreDen">0</span></div>
+  </header>
+
+  <div class="progress" aria-hidden="true"><i id="bar"></i></div>
+
+  <section class="card">
+    <!-- Quiz view -->
+    <div id="quiz">
+      <div class="frame" id="frame">
+        <img id="photo" alt="Red rock geology quiz image">
+        <div class="spinner" aria-label="Loading image"></div>
+      </div>
+      <div class="controls">
+        <div class="meta"><span id="counter"></span><span id="qid"></span></div>
+        <div class="buttons">
+          <button id="utah" class="choice">UTAH<span class="kbd">U</span></button>
+          <button id="morocco" class="choice">MOROCCO<span class="kbd">M</span></button>
+        </div>
+        <div id="result" class="result" role="status" aria-live="polite"></div>
+        <div class="nextrow">
+          <button id="next" style="display:none">Next image <span class="kbd" style="opacity:.6">&rarr;</span></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- End screen -->
+    <div id="summary" class="summary">
+      <div class="big" id="finalScore">0 / 20</div>
+      <div class="grade" id="grade"></div>
+      <div class="blurb" id="blurb"></div>
+      <div class="nextrow">
+        <button id="restart">Shuffle &amp; play again</button>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p class="hint">Tip: press <b>U</b> / <b>M</b> to answer, <b>&rarr;</b> or <b>Space</b> for the next image, <b>R</b> to restart.</p>
+    <p>Images are served from Wikimedia Commons; the source/license link appears after each guess.
+    Some Utah picks sit in south-central Utah at the northern edge of the broad &ldquo;southern Utah red-rock country&rdquo; region.</p>
+  </footer>
+</main>
+
+<script>
+const original = [{"region": "Morocco", "place": "Jbel Saghro / Tadaout n'Tablah", "file": "Djebel_Saghro_Tadaout_n_Tablah_1.jpg", "id": "Q01", "image_url": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Djebel_Saghro_Tadaout_n_Tablah_1.jpg?width=1600", "source_url": "https://commons.wikimedia.org/wiki/File:Djebel_Saghro_Tadaout_n_Tablah_1.jpg"}, {"region": "Morocco", "place": "Morocco, exact formation identified on source page", "file": "Rock_formations_in_Morocco_1.jpg", "id": "Q02", "image_url": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Rock_formations_in_Morocco_1.jpg?width=1600", "source_url": "https://commons.wikimedia.org/wiki/File:Rock_formations_in_Morocco_1.jpg"}, {"region": "Morocco", "place": "Dadès Gorge area", "file": "Dades_Gorge_(4989720812).jpg", "id": "Q03", "image_url": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Dades_Gorge_%284989720812%29.jpg?width=1600", "source_url": "https://commons.wikimedia.org/wiki/File:Dades_Gorge_%284989720812%29.jpg"}, {"region": "Utah", "place": "Snow Canyon State Park", "file": "Snow_Canyon_State_Park_-_29744959272.jpg", "id": "Q04", "image_url": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Snow_Canyon_State_Park_-_29744959272.jpg?width=1600", "source_url": "https://commons.wikimedia.org/wiki/File:Snow_Canyon_State_Park_-_29744959272.jpg"}, {"region": "Utah", "place": "San Rafael Swell", "file": "San_Rafael_Swell_(31009147965).jpg", "id": "Q05", "image_url": "https://commons.wikimedia.org/wiki/Special:Redirect/file/San_Rafael_Swell_%2831009147965%29.jpg?width=1600", "source_url": "https://commons.wikimedia.org/wiki/File:San_Rafael_Swell_%2831009147965%29.jpg"}, {"region": "Utah", "place": "San Rafael Swell / Wedge area", "file": "San_Rafael_Swell_and_Canyon_-_Wedgepanel_(23991031027).jpg", "id": "Q06", "image_url": "https://commons.wikimedia.org/wiki/Special:Redirect/file/San_Rafael_Swell_and_Canyon_-_Wedgepanel_%2823991031027%29.jpg?width=1600", "source_url": "https://commons.wikimedia.org/wiki/File:San_Rafael_Swell_and_Canyon_-_Wedgepanel_%2823991031027%29.jpg"}, {"region": "Utah", "place": "Waterpocket Fold / Capitol Reef area", "file": "Closeup_of_Waterpocket_Fold_from_the_Goosenecks_overlook.jpeg", "id": "Q07", "image_url": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Closeup_of_Waterpocket_Fold_from_the_Goosenecks_overlook.jpeg?width=1600", "source_url": "https://commons.wikimedia.org/wiki/File:Closeup_of_Waterpocket_Fold_from_the_Goosenecks_overlook.jpeg"}, {"region": "Morocco", "place": "Dadès Gorge area", "file": "Dades_Gorge_(4989116949).jpg", "id": "Q08", "image_url": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Dades_Gorge_%284989116949%29.jpg?width=1600", "source_url": "https://commons.wikimedia.org/wiki/File:Dades_Gorge_%284989116949%29.jpg"}, {"region": "Morocco", "place": "Jbel Saghro", "file": "Dejbel_saghro.jpg", "id": "Q09", "image_url": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Dejbel_saghro.jpg?width=1600", "source_url": "https://commons.wikimedia.org/wiki/File:Dejbel_saghro.jpg"}, {"region": "Utah", "place": "Snow Canyon State Park", "file": "Snow_Canyon_State_Park_2016-09-05_19-54-17.jpg", "id": "Q10", "image_url": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Snow_Canyon_State_Park_2016-09-05_19-54-17.jpg?width=1600", "source_url": "https://commons.wikimedia.org/wiki/File:Snow_Canyon_State_Park_2016-09-05_19-54-17.jpg"}, {"region": "Utah", "place": "Red Cliffs Desert Reserve", "file": "Red_Cliffs_Desert_Reserve.JPG", "id": "Q11", "image_url": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Red_Cliffs_Desert_Reserve.JPG?width=1600", "source_url": "https://commons.wikimedia.org/wiki/File:Red_Cliffs_Desert_Reserve.JPG"}, {"region": "Utah", "place": "Snow Canyon State Park", "file": "Snow_Canyon_State_Park_(17614747400).jpg", "id": "Q12", "image_url": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Snow_Canyon_State_Park_%2817614747400%29.jpg?width=1600", "source_url": "https://commons.wikimedia.org/wiki/File:Snow_Canyon_State_Park_%2817614747400%29.jpg"}, {"region": "Morocco", "place": "Dadès Gorge area", "file": "Dades_Gorge_(4989117711).jpg", "id": "Q13", "image_url": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Dades_Gorge_%284989117711%29.jpg?width=1600", "source_url": "https://commons.wikimedia.org/wiki/File:Dades_Gorge_%284989117711%29.jpg"}, {"region": "Utah", "place": "Snow Canyon State Park", "file": "Snow_Canyon_State_Park_2023-12-29_09-41-40.jpg", "id": "Q14", "image_url": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Snow_Canyon_State_Park_2023-12-29_09-41-40.jpg?width=1600", "source_url": "https://commons.wikimedia.org/wiki/File:Snow_Canyon_State_Park_2023-12-29_09-41-40.jpg"}, {"region": "Utah", "place": "Grand Staircase–Escalante National Monument", "file": "Grand_Staircase-Escalante_National_Monument,_Oct_6,_2015_Photo_credit-_BLM_Utah_(52565577342).jpg", "id": "Q15", "image_url": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Grand_Staircase-Escalante_National_Monument%2C_Oct_6%2C_2015_Photo_credit-_BLM_Utah_%2852565577342%29.jpg?width=1600", "source_url": "https://commons.wikimedia.org/wiki/File:Grand_Staircase-Escalante_National_Monument%2C_Oct_6%2C_2015_Photo_credit-_BLM_Utah_%2852565577342%29.jpg"}, {"region": "Morocco", "place": "Dadès Gorge area", "file": "Dades_Gorge_(4989116051).jpg", "id": "Q16", "image_url": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Dades_Gorge_%284989116051%29.jpg?width=1600", "source_url": "https://commons.wikimedia.org/wiki/File:Dades_Gorge_%284989116051%29.jpg"}, {"region": "Morocco", "place": "Dadès Gorge area", "file": "Dades_Gorge_(4989115091).jpg", "id": "Q17", "image_url": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Dades_Gorge_%284989115091%29.jpg?width=1600", "source_url": "https://commons.wikimedia.org/wiki/File:Dades_Gorge_%284989115091%29.jpg"}, {"region": "Morocco", "place": "Dadès Gorge area", "file": "Sandstone_Rock_Formations,_Dades_Gorge_area_-_Flickr_-_gailhampshire_(1).jpg", "id": "Q18", "image_url": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Sandstone_Rock_Formations%2C_Dades_Gorge_area_-_Flickr_-_gailhampshire_%281%29.jpg?width=1600", "source_url": "https://commons.wikimedia.org/wiki/File:Sandstone_Rock_Formations%2C_Dades_Gorge_area_-_Flickr_-_gailhampshire_%281%29.jpg"}, {"region": "Morocco", "place": "Dadès Gorge area", "file": "Dades_Gorge_(4989118105).jpg", "id": "Q19", "image_url": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Dades_Gorge_%284989118105%29.jpg?width=1600", "source_url": "https://commons.wikimedia.org/wiki/File:Dades_Gorge_%284989118105%29.jpg"}, {"region": "Utah", "place": "Kodachrome Basin State Park", "file": "Kodachrome_Basin_State_Park.jpg", "id": "Q20", "image_url": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Kodachrome_Basin_State_Park.jpg?width=1600", "source_url": "https://commons.wikimedia.org/wiki/File:Kodachrome_Basin_State_Park.jpg"}];
+
+let data = [...original];
+let index = 0, correct = 0, answered = 0;
+
+const $ = id => document.getElementById(id);
+const photo = $('photo'), frame = $('frame');
+const counter = $('counter'), qid = $('qid');
+const scoreNum = $('scoreNum'), scoreDen = $('scoreDen'), bar = $('bar');
+const result = $('result');
+const utah = $('utah'), morocco = $('morocco');
+const next = $('next');
+const quiz = $('quiz'), summary = $('summary');
+const restart = $('restart');
+
+function preload(i) {
+  if (i >= 0 && i < data.length) { const im = new Image(); im.src = data[i].image_url; }
+}
+
+function setProgress() {
+  bar.style.width = (answered / data.length * 100) + '%';
+}
+
+function render() {
+  const item = data[index];
+  // image with loading state
+  frame.classList.remove('loaded');
+  photo.classList.remove('loaded');
+  photo.onload = () => { frame.classList.add('loaded'); photo.classList.add('loaded'); };
+  photo.onerror = () => { frame.classList.add('loaded'); };
+  photo.src = item.image_url;
+  if (photo.complete && photo.naturalWidth) photo.onload();
+
+  counter.textContent = `Image ${index + 1} of ${data.length}`;
+  qid.textContent = item.id;
+
+  result.className = 'result';
+  result.innerHTML = '';
+  utah.disabled = false; morocco.disabled = false;
+  utah.className = 'choice'; morocco.className = 'choice';
+  next.style.display = 'none';
+  next.textContent = index < data.length - 1 ? 'Next image' : 'See results';
+
+  preload(index + 1);
+}
+
+function guess(choice) {
+  if (utah.disabled) return; // already answered
+  const item = data[index];
+  const ok = choice === item.region;
+  answered++;
+  if (ok) correct++;
+  scoreNum.textContent = correct;
+  scoreDen.textContent = answered;
+  setProgress();
+
+  utah.disabled = true; morocco.disabled = true;
+  // highlight the correct region green; if the user was wrong, mark their pick red
+  const pick = choice === 'Utah' ? utah : morocco;
+  const truth = item.region === 'Utah' ? utah : morocco;
+  truth.classList.add('is-correct');
+  if (!ok) pick.classList.add('is-wrong');
+
+  result.className = `result show ${ok ? 'correct' : 'wrong'}`;
+  result.innerHTML =
+    `<div class="verdict">${ok ? '✓ Correct' : '✗ Not quite'} — ${item.region}</div>` +
+    `<div class="place">${item.place} · <a href="${item.source_url}" target="_blank" rel="noopener">source &amp; license</a></div>`;
+
+  next.style.display = 'block';
+  next.focus({ preventScroll: true });
+}
+
+function advance() {
+  if (!utah.disabled) return;          // can't advance before answering
+  if (index < data.length - 1) { index++; render(); }
+  else showSummary();
+}
+
+function gradeFor(pct) {
+  if (pct === 100) return ['Geologist.', 'A perfect run. You actually know your sandstone.'];
+  if (pct >= 85)  return ['Sharp eye.', 'Well above a coin flip — you can read the rock.'];
+  if (pct >= 65)  return ['Solid.', 'Better than guessing. The hard ones got you.'];
+  if (pct >= 50)  return ['Coin-flip country.', 'Turns out two continents of red rock look awfully alike.'];
+  return ['Fooled.', 'In your defense, that was the whole point.'];
+}
+
+function showSummary() {
+  quiz.style.display = 'none';
+  summary.classList.add('show');
+  const pct = Math.round(correct / data.length * 100);
+  $('finalScore').textContent = `${correct} / ${data.length}`;
+  const [g, b] = gradeFor(pct);
+  $('grade').textContent = `${g}  (${pct}%)`;
+  $('blurb').textContent = b;
+  restart.focus({ preventScroll: true });
+}
+
+function shuffle() {
+  for (let i = data.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [data[i], data[j]] = [data[j], data[i]];
+  }
+}
+
+function start() {
+  index = 0; correct = 0; answered = 0;
+  scoreNum.textContent = 0; scoreDen.textContent = 0;
+  setProgress();
+  summary.classList.remove('show');
+  quiz.style.display = '';
+  render();
+}
+
+utah.addEventListener('click', () => guess('Utah'));
+morocco.addEventListener('click', () => guess('Morocco'));
+next.addEventListener('click', advance);
+restart.addEventListener('click', () => { shuffle(); start(); });
+
+document.addEventListener('keydown', (e) => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const k = e.key.toLowerCase();
+  if (summary.classList.contains('show')) {
+    if (k === 'r' || k === 'enter' || k === ' ') { e.preventDefault(); shuffle(); start(); }
+    return;
+  }
+  if (k === 'u') { e.preventDefault(); guess('Utah'); }
+  else if (k === 'm') { e.preventDefault(); guess('Morocco'); }
+  else if (k === 'arrowright' || k === ' ' || k === 'enter') { e.preventDefault(); advance(); }
+  else if (k === 'r') { e.preventDefault(); shuffle(); start(); }
+});
+
+start();
+</script>
+</body>
+</html>
