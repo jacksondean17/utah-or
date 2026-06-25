@@ -5,7 +5,7 @@ one was shot in southern Utah or in Morocco. No sand dunes, famous arches, beach
 or obvious landmark giveaways — just rock that looks suspiciously similar across two
 continents.
 
-**Play it:** https://jacksondean17.github.io/utah-or/
+**Play it:** https://jacksondean.space/utah-or/
 
 ## How it works
 
